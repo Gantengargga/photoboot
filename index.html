@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Masterpiece | Photobooth HD</title>
+    <title>Premium Studio Photobooth</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --accent: #ff477e;
-            --dark: #0a0a0a;
+            --dark: #0f0f0f;
             --bg-strip: #ffffff;
         }
 
@@ -20,23 +20,21 @@
             display: flex; flex-direction: column; align-items: center; min-height: 100vh;
         }
 
-        header { padding: 25px; text-align: center; }
-        h1 { margin: 0; font-family: 'Playfair Display', serif; color: var(--accent); font-size: 1.8rem; }
+        header { padding: 30px 20px; text-align: center; }
+        h1 { margin: 0; font-family: 'Playfair Display', serif; color: var(--accent); }
 
-        /* --- CAMERA VIEW --- */
+        /* --- PREVIEW CAMERA --- */
         #camera-wrapper {
-            position: relative; width: 90%; max-width: 450px;
-            aspect-ratio: 4/3; background: #000;
-            border-radius: 15px; overflow: hidden;
-            border: 3px solid #222;
+            position: relative; width: 320px; height: 240px; /* Ukuran preview standar 4:3 */
+            background: #000; border-radius: 15px; overflow: hidden;
+            border: 3px solid #333;
         }
 
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
         #timer {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 100px; font-weight: bold; color: var(--accent);
-            text-shadow: 0 0 20px rgba(0,0,0,0.8); display: none;
+            font-size: 80px; font-weight: bold; color: var(--accent); display: none;
         }
 
         /* --- CONTROLS --- */
@@ -44,52 +42,50 @@
         .btn {
             padding: 12px 25px; border: none; border-radius: 50px;
             font-weight: bold; cursor: pointer; transition: 0.3s;
-            text-transform: uppercase; font-size: 0.8rem;
         }
         .btn-capture { background: var(--accent); color: white; }
         .btn-download { background: white; color: black; display: none; }
 
-        /* --- PHOTO STRIP (FIXED PROPORTION) --- */
+        /* --- PHOTO STRIP (FIXED & PROPORTIONAL) --- */
         #result-container {
             background: var(--bg-strip);
-            width: 150px; /* Lebar strip ramping */
-            padding: 12px;
+            width: 180px; /* Lebar strip */
+            padding: 15px 15px 25px 15px; /* Padding presisi */
             display: none; 
             flex-direction: column;
-            gap: 8px; /* Jarak antar foto yang rapat & estetik */
-            box-sizing: content-box;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.8);
-            margin-bottom: 40px;
+            gap: 10px; /* Jarak antar foto */
+            box-sizing: border-box; /* Kunci ukuran agar tidak meluber */
+            box-shadow: 0 10px 40px rgba(0,0,0,1);
         }
 
         .photo-frame {
             width: 100%;
-            height: 110px; /* Tinggi proporsional agar tidak terlalu panjang */
-            background: #111;
+            aspect-ratio: 1 / 1; /* FOTO JADI KOTAK SEMPURNA (ANTI GEPENG) */
+            background: #222;
             overflow: hidden;
-            border: 0.5px solid #f0f0f0;
         }
 
         .photo-frame img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
+            object-fit: cover; /* INI KUNCINYA: Memotong bagian samping agar tidak gepeng */
+            transform: scaleX(-1); 
             display: block;
         }
 
         .strip-footer {
-            text-align: center; color: #111; 
+            text-align: center; color: #222; 
             font-family: 'Playfair Display', serif;
-            padding: 5px 0;
+            font-size: 13px; margin-top: 10px;
         }
 
-        .footer-text { font-size: 10px; font-weight: bold; letter-spacing: 1px; }
-        .timestamp { font-size: 7px; color: #777; font-family: sans-serif; margin-top: 2px; }
+        .timestamp {
+            font-size: 9px; color: #666; font-family: sans-serif; margin-top: 4px;
+        }
 
         .flash {
             position: fixed; inset: 0; background: white;
-            opacity: 0; pointer-events: none; z-index: 100;
+            opacity: 0; pointer-events: none; z-index: 999;
         }
     </style>
 </head>
@@ -98,8 +94,7 @@
     <div class="flash" id="flash-effect"></div>
 
     <header>
-        <h1>VOGUE STUDIO</h1>
-        <p style="font-size: 0.8rem; opacity: 0.6;">Professional Digital Booth</p>
+        <h1>PHOTOBOOTH ✨</h1>
     </header>
 
     <div id="camera-wrapper">
@@ -108,8 +103,8 @@
     </div>
 
     <div class="controls">
-        <button class="btn btn-capture" onclick="startSequence()">START SESSION</button>
-        <button class="btn btn-download" id="download-btn" onclick="downloadStrip()">SAVE IMAGE</button>
+        <button class="btn btn-capture" onclick="startSequence()">MULAI SESI FOTO</button>
+        <button class="btn btn-download" id="download-btn" onclick="downloadStrip()">SIMPAN FOTO</button>
     </div>
 
     <div id="result-container">
@@ -118,7 +113,7 @@
         <div class="photo-frame"><img id="img3"></div>
         <div class="photo-frame"><img id="img4"></div>
         <div class="strip-footer">
-            <div class="footer-text">— MEMORIES —</div>
+            — MEMORIES —
             <div class="timestamp" id="date-display"></div>
         </div>
     </div>
@@ -135,7 +130,7 @@
         async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user", width: 1280, height: 720 } 
+                    video: { facingMode: "user", width: 640, height: 480 } 
                 });
                 video.srcObject = stream;
             } catch (err) {
@@ -164,14 +159,13 @@
                         timerEl.style.display = 'none';
                         capture();
                         photoCount++;
-                        setTimeout(takePhotoFlow, 800); 
+                        setTimeout(takePhotoFlow, 1000); 
                     }
                 }, 1000);
             } else {
                 document.getElementById('result-container').style.display = 'flex';
                 document.getElementById('download-btn').style.display = 'block';
                 document.getElementById('date-display').innerText = new Date().toLocaleDateString('id-ID');
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }
         }
 
@@ -180,25 +174,25 @@
             setTimeout(() => flash.style.opacity = '0', 100);
 
             const context = canvas.getContext('2d');
+            // Ambil resolusi asli video agar jernih
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            document.getElementById(`img${photoCount + 1}`).src = canvas.toDataURL('image/png');
+            
+            const data = canvas.toDataURL('image/png');
+            document.getElementById(`img${photoCount + 1}`).src = data;
         }
 
         function downloadStrip() {
             const container = document.getElementById('result-container');
-            // Menghitung lebar total: 150px lebar + 24px total padding
-            const totalWidth = 174; 
-
+            
             html2canvas(container, {
-                scale: 3, 
+                scale: 3, // HD Resolution
                 backgroundColor: "#ffffff",
-                width: totalWidth,
-                windowWidth: totalWidth
+                width: 180, // Paksa lebar agar tidak gepeng saat download
             }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `VogueBooth-${Date.now()}.png`;
+                link.download = `Memories-${Date.now()}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
