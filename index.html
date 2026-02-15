@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masterpiece Digital Photobooth</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #ff477e;
+            --dark: #121212;
+            --white: #ffffff;
+        }
+
+        body {
+            margin: 0; padding: 0; background: var(--dark);
+            font-family: 'Quicksand', sans-serif; color: var(--white);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+
+        header { padding: 20px; text-align: center; }
+        h1 { margin: 0; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+
+        /* --- CAMERA VIEW --- */
+        #camera-container {
+            position: relative; width: 90%; max-width: 500px;
+            aspect-ratio: 4/3; background: #000;
+            border-radius: 20px; overflow: hidden;
+            box-shadow: 0 0 30px rgba(255, 71, 126, 0.3);
+            border: 4px solid #333;
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        #timer {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 100px; font-weight: bold; color: var(--accent);
+            text-shadow: 0 0 20px rgba(0,0,0,0.5); display: none;
+        }
+
+        /* --- CONTROLS --- */
+        .controls { margin-top: 30px; display: flex; gap: 15px; }
+
+        .btn {
+            padding: 15px 30px; border: none; border-radius: 50px;
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .btn-capture { background: var(--accent); color: white; }
+        .btn-download { background: #4caf50; color: white; display: none; }
+        .btn:hover { transform: scale(1.05); opacity: 0.9; }
+
+        /* --- PHOTO STRIP RESULT --- */
+        #result-container {
+            margin-top: 40px; padding: 20px; background: white;
+            width: 180px; display: none; flex-direction: column;
+            gap: 10px; border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .photo-frame {
+            width: 100%; aspect-ratio: 4/3; background: #eee;
+            overflow: hidden; border-radius: 2px;
+        }
+
+        .photo-frame img { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .strip-footer {
+            text-align: center; color: #333; font-size: 10px;
+            font-weight: bold; margin-top: 5px;
+        }
+
+        .flash {
+            position: fixed; inset: 0; background: white;
+            opacity: 0; pointer-events: none; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flash" id="flash-effect"></div>
+
+    <header>
+        <h1>STUDIO PHOTOBOOTH</h1>
+        <p>Ambil 4 momen terbaikmu!</p>
+    </header>
+
+    <div id="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <div id="timer">3</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-capture" onclick="startSequence()">MULAI SESI FOTO</button>
+        <button class="btn btn-download" id="download-btn" onclick="downloadStrip()">DOWNLOAD HASIL</button>
+    </div>
+
+    <div id="result-container">
+        <div class="photo-frame"><img id="img1"></div>
+        <div class="photo-frame"><img id="img2"></div>
+        <div class="photo-frame"><img id="img3"></div>
+        <div class="photo-frame"><img id="img4"></div>
+        <div class="strip-footer">✨ MEMORIES ✨</div>
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const timerEl = document.getElementById('timer');
+        const flash = document.getElementById('flash-effect');
+        let photoCount = 0;
+
+        // Inisialisasi Kamera
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Mohon izinkan akses kamera untuk menggunakan Photobooth!");
+            }
+        }
+
+        function startSequence() {
+            photoCount = 0;
+            document.getElementById('result-container').style.display = 'none';
+            document.getElementById('download-btn').style.display = 'none';
+            takePhotoFlow();
+        }
+
+        function takePhotoFlow() {
+            if (photoCount < 4) {
+                let count = 3;
+                timerEl.style.display = 'block';
+                timerEl.innerText = count;
+
+                const countdown = setInterval(() => {
+                    count--;
+                    timerEl.innerText = count;
+                    if (count <= 0) {
+                        clearInterval(countdown);
+                        timerEl.style.display = 'none';
+                        capture();
+                        photoCount++;
+                        setTimeout(takePhotoFlow, 1000); // Jeda antar foto
+                    }
+                }, 1000);
+            } else {
+                document.getElementById('result-container').style.display = 'flex';
+                document.getElementById('download-btn').style.display = 'block';
+            }
+        }
+
+        function capture() {
+            // Efek Flash
+            flash.style.opacity = '1';
+            setTimeout(() => flash.style.opacity = '0', 100);
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const data = canvas.toDataURL('image/png');
+            document.getElementById(`img${photoCount + 1}`).src = data;
+        }
+
+        function downloadStrip() {
+            const container = document.getElementById('result-container');
+            container.style.display = 'flex'; // Pastikan terlihat saat dirender
+            
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'my-photobooth.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        initCamera();
+    </script>
+</body>
+</html>
